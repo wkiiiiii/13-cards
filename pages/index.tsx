@@ -357,31 +357,12 @@ function GameBoard({ cards }: { cards: Card[] }) {
   const handleCommunityCardClick = (card: Card) => {
     if (confirmed) return;
     
-    // For jokers: just select them and don't auto-place
+    // Disable selection of joker cards completely
     if (card.suit === 'joker') {
-      // If there's already a non-joker community card selected, don't allow joker selection
-      if (selectedCommunityCard && selectedCommunityCard.suit !== 'joker') {
-        return;
-      }
-      
-      // If the same joker is already selected, deselect it
-      if (selectedCommunityCard && 
-          selectedCommunityCard.suit === 'joker' && 
-          selectedCommunityCard.value === card.value) {
-        setSelectedCommunityCard(null);
-      } else {
-        // Otherwise select the joker
-        setSelectedCommunityCard(card);
-      }
       return;
     }
     
     // For non-joker community cards: auto-place them in the next available slot
-    
-    // If a joker is already selected, don't allow selecting another card
-    if (selectedCommunityCard && selectedCommunityCard.suit === 'joker') {
-      return;
-    }
     
     // If this card is already selected, deselect it and remove from board
     if (selectedCommunityCard && 
@@ -829,7 +810,7 @@ function GameBoard({ cards }: { cards: Card[] }) {
             <div 
               key={`community-${index}`}
               id={`community-${card.suit}-${card.value}-${index}`}
-              onClick={() => handleCommunityCardClick(card)}
+              onClick={() => card.suit !== 'joker' ? handleCommunityCardClick(card) : null}
               draggable={card.suit !== 'joker'}
               onDragStart={(e) => handleDragStart({
                 ...card,
@@ -837,10 +818,10 @@ function GameBoard({ cards }: { cards: Card[] }) {
                 isPlaced: false
               }, e)}
               onDragEnd={handleDragEnd}
-              className={`w-[45px] h-[63px] rounded-lg shadow-md cursor-pointer transform transition-all duration-200 
+              className={`w-[45px] h-[63px] rounded-lg shadow-md ${card.suit === 'joker' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} transform transition-all duration-200 
                 ${selectedCommunityCard && selectedCommunityCard.suit === card.suit && selectedCommunityCard.value === card.value 
                   ? 'border-2 border-blue-500 scale-110' 
-                  : 'hover:scale-105'}`}
+                  : card.suit !== 'joker' ? 'hover:scale-105' : ''}`}
             >
               <CardComponent
                 card={{
@@ -862,8 +843,8 @@ function GameBoard({ cards }: { cards: Card[] }) {
       </div>
 
       {/* Sorting controls */}
-      <div className="fixed bottom-20 right-2 bg-green-700 p-1.5 rounded-lg shadow-lg z-10">
-        <div className="flex space-x-1 items-center">
+      <div className="fixed bottom-[72px] left-0 right-0 flex justify-center p-1 bg-green-800 z-10">
+        <div className="flex space-x-2 items-center">
           <span className="text-white text-xs">Sort:</span>
           <button 
             onClick={() => setSortMethod('suit')} 
