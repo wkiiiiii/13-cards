@@ -854,8 +854,8 @@ function GameBoard({ cards }: { cards: Card[] }) {
         )}
       </div>
 
-      {/* Sorting controls */}
-      <div className="fixed bottom-[72px] left-0 right-0 flex justify-center p-1 bg-green-800 z-10">
+      {/* Sorting controls - now positioned between community cards and player's cards */}
+      <div className="mb-2 py-1 px-2 bg-green-800 rounded-md flex justify-center">
         <div className="flex space-x-2 items-center">
           <span className="text-white text-xs">Sort:</span>
           <button 
