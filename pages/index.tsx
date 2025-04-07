@@ -806,32 +806,44 @@ function GameBoard({ cards }: { cards: Card[] }) {
       <div className="mb-4 bg-blue-100 rounded-xl p-3 shadow-lg">
         <h3 className="text-sm font-medium mb-2 text-gray-700">Community Cards (Select at most one):</h3>
         <div className="flex justify-center gap-2">
-          {communityCards.map((card, index) => (
-            <div 
-              key={`community-${index}`}
-              id={`community-${card.suit}-${card.value}-${index}`}
-              onClick={() => card.suit !== 'joker' ? handleCommunityCardClick(card) : null}
-              draggable={card.suit !== 'joker'}
-              onDragStart={(e) => handleDragStart({
-                ...card,
-                id: `community-${card.suit}-${card.value}-${index}`,
-                isPlaced: false
-              }, e)}
-              onDragEnd={handleDragEnd}
-              className={`w-[45px] h-[63px] rounded-lg shadow-md ${card.suit === 'joker' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} transform transition-all duration-200 
-                ${selectedCommunityCard && selectedCommunityCard.suit === card.suit && selectedCommunityCard.value === card.value 
-                  ? 'border-2 border-blue-500 scale-110' 
-                  : card.suit !== 'joker' ? 'hover:scale-105' : ''}`}
-            >
-              <CardComponent
-                card={{
+          {communityCards.map((card, index) => {
+            // Add a clear visual indication that jokers are not selectable
+            const isJoker = card.suit === 'joker';
+            return (
+              <div 
+                key={`community-${index}`}
+                id={`community-${card.suit}-${card.value}-${index}`}
+                onClick={() => isJoker ? null : handleCommunityCardClick(card)}
+                draggable={!isJoker}
+                onDragStart={(e) => !isJoker ? handleDragStart({
                   ...card,
                   id: `community-${card.suit}-${card.value}-${index}`,
                   isPlaced: false
-                }}
-              />
-            </div>
-          ))}
+                }, e) : undefined}
+                onDragEnd={handleDragEnd}
+                className={`w-[45px] h-[63px] rounded-lg shadow-md transform transition-all duration-200 
+                  ${isJoker ? 'opacity-30 cursor-not-allowed relative' : 'cursor-pointer'}
+                  ${selectedCommunityCard && selectedCommunityCard.suit === card.suit && selectedCommunityCard.value === card.value 
+                    ? 'border-2 border-blue-500 scale-110' 
+                    : !isJoker ? 'hover:scale-105' : ''}`}
+              >
+                <CardComponent
+                  card={{
+                    ...card,
+                    id: `community-${card.suit}-${card.value}-${index}`,
+                    isPlaced: false
+                  }}
+                />
+                {/* Add a visual indicator over joker cards */}
+                {isJoker && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-8 h-0.5 bg-red-500 transform rotate-45"></div>
+                    <div className="w-8 h-0.5 bg-red-500 transform -rotate-45"></div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
         {selectedCommunityCard && (
           <p className="text-center mt-1 text-xs text-gray-600">
