@@ -650,11 +650,11 @@ function GameBoard({ cards }: { cards: Card[] }) {
       const deltaY = currentTouch.clientY - initialY;
       
       // Apply the transform with a slight scale increase to make it more visible
-      cardElement.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.1)`;
+      cardElement.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.2)`;
       cardElement.style.zIndex = '1000';
       cardElement.style.position = 'relative';
-      cardElement.style.opacity = '0.8'; // Add slight transparency
-      cardElement.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)'; // Add shadow for depth
+      cardElement.style.opacity = '0.9'; // Make it more visible
+      cardElement.style.boxShadow = '0 8px 20px rgba(0,0,0,0.3)'; // Add stronger shadow for depth
       
       // Highlight potential drop targets by finding the closest slot
       const slots = document.querySelectorAll('.slot-target');
@@ -687,9 +687,10 @@ function GameBoard({ cards }: { cards: Card[] }) {
       });
       
       // Highlight the closest slot if it's within a reasonable distance
-      if (closestSlot && closestDistance < 80) {
-        (closestSlot as HTMLElement).style.background = 'rgba(59, 130, 246, 0.2)';
+      if (closestSlot && closestDistance < 120) {
+        (closestSlot as HTMLElement).style.background = 'rgba(59, 130, 246, 0.3)';
         (closestSlot as HTMLElement).style.borderColor = '#3b82f6';
+        (closestSlot as HTMLElement).style.borderWidth = '3px';
       }
       
       // Prevent default to stop scrolling
@@ -744,10 +745,14 @@ function GameBoard({ cards }: { cards: Card[] }) {
             closestSlot = parseInt(slotIndex, 10);
           }
         }
+        
+        // Reset any previously highlighted slots
+        slot.style.background = '';
+        slot.style.borderColor = '';
       });
       
-      // Only consider slots within a reasonable distance (80px) and valid positions
-      if (closestDistance < 80 && closestRow >= 0 && closestSlot >= 0) {
+      // Only consider slots within a reasonable distance (100px) and valid positions
+      if (closestDistance < 100 && closestRow >= 0 && closestSlot >= 0) {
         // Check if this slot is empty
         const slotKey = `${closestRow}-${closestSlot}`;
         if (!positions[slotKey]) {
@@ -899,16 +904,17 @@ function GameBoard({ cards }: { cards: Card[] }) {
                 key={`row1-${i}`}
                 data-row="0"
                 data-slot={`${i}`}
-                className="slot-target w-[45px] h-[63px] rounded-lg shadow-md flex justify-center items-center"
+                className="slot-target w-[50px] h-[70px] rounded-lg shadow-md flex justify-center items-center touch-manipulation"
                 onDragOver={(e) => handleDragOver(e)}
                 onDrop={(e) => handleDrop(e, 0, i)}
+                style={{ touchAction: 'manipulation' }}
               >
                 {positions[`0-${i}`] ? (
                   <div onClick={() => handleSlotClick(0, i)}>
                     <CardComponent card={positions[`0-${i}`]!} isSmall={false} />
                   </div>
                 ) : (
-                  <div className={`w-full h-full border-2 border-dashed border-gray-400 opacity-70 bg-white`}></div>
+                  <div className={`w-full h-full border-2 border-dashed border-gray-400 opacity-70 bg-white rounded-lg`}></div>
                 )}
               </div>
             ))}
@@ -921,16 +927,17 @@ function GameBoard({ cards }: { cards: Card[] }) {
                 key={`row2-${i}`}
                 data-row="1"
                 data-slot={`${i}`}
-                className="slot-target w-[45px] h-[63px] rounded-lg shadow-md flex justify-center items-center"
+                className="slot-target w-[50px] h-[70px] rounded-lg shadow-md flex justify-center items-center touch-manipulation"
                 onDragOver={(e) => handleDragOver(e)}
                 onDrop={(e) => handleDrop(e, 1, i)}
+                style={{ touchAction: 'manipulation' }}
               >
                 {positions[`1-${i}`] ? (
                   <div onClick={() => handleSlotClick(1, i)}>
                     <CardComponent card={positions[`1-${i}`]!} isSmall={false} />
                   </div>
                 ) : (
-                  <div className={`w-full h-full border-2 border-dashed border-gray-400 opacity-70 bg-white`}></div>
+                  <div className={`w-full h-full border-2 border-dashed border-gray-400 opacity-70 bg-white rounded-lg`}></div>
                 )}
               </div>
             ))}
@@ -943,16 +950,17 @@ function GameBoard({ cards }: { cards: Card[] }) {
                 key={`row3-${i}`}
                 data-row="2"
                 data-slot={`${i}`}
-                className="slot-target w-[45px] h-[63px] rounded-lg shadow-md flex justify-center items-center"
+                className="slot-target w-[50px] h-[70px] rounded-lg shadow-md flex justify-center items-center touch-manipulation"
                 onDragOver={(e) => handleDragOver(e)}
                 onDrop={(e) => handleDrop(e, 2, i)}
+                style={{ touchAction: 'manipulation' }}
               >
                 {positions[`2-${i}`] ? (
                   <div onClick={() => handleSlotClick(2, i)}>
                     <CardComponent card={positions[`2-${i}`]!} isSmall={false} />
                   </div>
                 ) : (
-                  <div className={`w-full h-full border-2 border-dashed border-gray-400 opacity-70 bg-white`}></div>
+                  <div className={`w-full h-full border-2 border-dashed border-gray-400 opacity-70 bg-white rounded-lg`}></div>
                 )}
               </div>
             ))}
@@ -967,25 +975,30 @@ function GameBoard({ cards }: { cards: Card[] }) {
           {communityCards.map((card, index) => {
             // Add a clear visual indication that jokers are not selectable
             const isJoker = card.suit === 'joker';
+            const cardId = `community-${card.suit}-${card.value}-${index}`;
+            
             return (
               <div 
                 key={`community-${index}`}
-                id={`community-${card.suit}-${card.value}-${index}`}
+                id={cardId}
                 onClick={() => isJoker ? null : handleCommunityCardClick(card)}
-                draggable={!isJoker}
-                onDragStart={(e) => !isJoker ? handleDragStart({
+                draggable={!isJoker && !confirmed}
+                onDragStart={(e) => !isJoker && !confirmed ? handleDragStart({
                   ...card,
-                  id: `community-${card.suit}-${card.value}-${index}`,
+                  id: cardId,
                   isPlaced: false
                 }, e) : undefined}
-                onTouchStart={(e) => !isJoker ? handleTouchStart({
-                  ...card,
-                  id: `community-${card.suit}-${card.value}-${index}`,
-                  isPlaced: false
-                }, e) : undefined}
+                onTouchStart={(e) => {
+                  if (isJoker || confirmed) return;
+                  handleTouchStart({
+                    ...card,
+                    id: cardId,
+                    isPlaced: false
+                  }, e);
+                }}
                 onDragEnd={handleDragEnd}
                 className={`w-[45px] h-[63px] rounded-lg shadow-md transform transition-all duration-200 
-                  ${isJoker ? 'opacity-30 cursor-not-allowed relative' : 'cursor-pointer'}
+                  ${isJoker ? 'opacity-30 cursor-not-allowed relative' : confirmed ? 'cursor-default' : 'cursor-pointer'}
                   ${selectedCommunityCard && selectedCommunityCard.suit === card.suit && selectedCommunityCard.value === card.value 
                     ? 'border-2 border-blue-500 scale-110' 
                     : !isJoker ? 'hover:scale-105' : ''}`}
@@ -993,7 +1006,7 @@ function GameBoard({ cards }: { cards: Card[] }) {
                 <CardComponent
                   card={{
                     ...card,
-                    id: `community-${card.suit}-${card.value}-${index}`,
+                    id: cardId,
                     isPlaced: false
                   }}
                 />
@@ -1044,14 +1057,15 @@ function GameBoard({ cards }: { cards: Card[] }) {
               key={card.id}
               id={card.id}
               draggable={!card.isPlaced && !confirmed}
-              onDragStart={(e) => handleDragStart(card, e)}
+              onDragStart={(e) => !card.isPlaced && !confirmed ? handleDragStart(card, e) : undefined}
               onTouchStart={(e) => !card.isPlaced && !confirmed ? handleTouchStart(card, e) : undefined}
               onDragEnd={handleDragEnd}
-              className={card.isPlaced ? 'opacity-50' : ''}
+              className={`${card.isPlaced ? 'opacity-50' : ''} touch-manipulation`}
+              style={{ touchAction: 'manipulation' }}
             >
               <CardComponent 
                 card={card}
-                onClick={() => handleCardClick(card)}
+                onClick={() => !card.isPlaced && !confirmed ? handleCardClick(card) : undefined}
               />
             </div>
           ))}
