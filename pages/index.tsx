@@ -42,17 +42,21 @@ function CardComponent({
     color = 'text-purple-600';
   }
 
-  const baseClasses = "bg-white rounded-lg shadow-md flex flex-col items-center justify-between cursor-pointer hover:shadow-xl transition-shadow";
+  const baseClasses = "bg-white rounded-lg shadow-md flex flex-col items-center justify-between touch-manipulation";
   
   // Reduced sizes for both regular and small cards for better mobile compatibility
   const sizeClasses = isSmall 
     ? "w-8 h-12 p-1" // Smaller size for already small cards
-    : "w-[45px] h-[63px] p-1"; // Reduced size for regular cards (was 60x84)
+    : "w-[50px] h-[70px] p-1"; // Slightly larger for better touch targets
+    
+  const interactionClasses = onClick ? "cursor-pointer active:scale-95 active:bg-gray-100 hover:shadow-xl" : "";
+  const placedClasses = card.isPlaced ? 'opacity-50' : 'transition-transform transform';
 
   return (
     <div 
-      className={`${baseClasses} ${sizeClasses} ${card.isPlaced ? 'opacity-50' : ''}`}
+      className={`${baseClasses} ${sizeClasses} ${interactionClasses} ${placedClasses}`}
       onClick={onClick}
+      style={{ touchAction: 'manipulation' }}
     >
       <div className={`${color} flex flex-col items-center`}>
         <div className={`font-bold ${isSmall ? 'text-xs' : 'text-sm'}`}>{card.value}</div>
@@ -610,6 +614,7 @@ function GameBoard({ cards }: { cards: Card[] }) {
   // Handle card drag start
   const handleDragStart = (card: PositionedCard, e: React.DragEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     if (confirmed) return;
+    console.log('Drag start with card:', card);
     setDraggedCard(card);
     
     // Handle mouse drag events
@@ -628,6 +633,7 @@ function GameBoard({ cards }: { cards: Card[] }) {
   // Handle touch start for mobile devices
   const handleTouchStart = (card: PositionedCard, e: React.TouchEvent<HTMLDivElement>) => {
     if (confirmed) return;
+    console.log('Touch start with card:', card);
     setDraggedCard(card);
     
     // Prevent scrolling while dragging
@@ -699,13 +705,6 @@ function GameBoard({ cards }: { cards: Card[] }) {
     
     // Create a function to handle touch end
     const handleTouchEnd = (endEvent: TouchEvent) => {
-      // Reset the transform
-      cardElement.style.transform = '';
-      cardElement.style.zIndex = '';
-      cardElement.style.position = '';
-      cardElement.style.opacity = '';
-      cardElement.style.boxShadow = '';
-      
       // Get touch end position
       const endTouch = endEvent.changedTouches[0];
       
@@ -751,22 +750,31 @@ function GameBoard({ cards }: { cards: Card[] }) {
         slot.style.borderColor = '';
       });
       
-      // Only consider slots within a reasonable distance (100px) and valid positions
-      if (closestDistance < 100 && closestRow >= 0 && closestSlot >= 0) {
+      console.log('Touch end - closest slot:', closestRow, closestSlot, 'distance:', closestDistance);
+      
+      // Reset card appearance
+      cardElement.style.transform = '';
+      cardElement.style.zIndex = '';
+      cardElement.style.position = '';
+      cardElement.style.opacity = '';
+      cardElement.style.boxShadow = '';
+      
+      // Only consider slots within a reasonable distance (120px) and valid positions
+      if (closestDistance < 120 && closestRow >= 0 && closestSlot >= 0) {
         // Check if this slot is empty
         const slotKey = `${closestRow}-${closestSlot}`;
+        console.log('Checking slot:', slotKey, 'occupied:', !!positions[slotKey]);
+        
         if (!positions[slotKey]) {
-          // Handle dropping a card (reuse existing logic)
-          handleDropCard(closestRow, closestSlot);
+          console.log('Dropping card', card.id, 'into slot', slotKey);
+          // Pass the card directly to avoid race conditions with state updates
+          handleDropCard(closestRow, closestSlot, card);
         }
       }
       
       // Remove event listeners
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
-      
-      // Clear the dragged card
-      setDraggedCard(null);
     };
     
     // Add event listeners
@@ -775,23 +783,30 @@ function GameBoard({ cards }: { cards: Card[] }) {
   };
   
   // Extracted the drop logic to reuse between mouse and touch
-  const handleDropCard = (row: number, slot: number) => {
-    if (!draggedCard || confirmed) return;
+  const handleDropCard = (row: number, slot: number, cardOverride?: PositionedCard) => {
+    // Use either the draggedCard from state, or a passed in card (for touch events)
+    const card = draggedCard || cardOverride;
+    console.log('handleDropCard called with', { row, slot, cardExists: !!card, hasOverride: !!cardOverride });
+    
+    if (!card || confirmed) return;
     
     const slotKey = `${row}-${slot}`;
     
     // If slot is already occupied, return
-    if (positions[slotKey]) return;
+    if (positions[slotKey]) {
+      console.log('Slot already occupied, canceling drop');
+      return;
+    }
     
     // For community cards
-    if (draggedCard.id.startsWith('community-')) {
+    if (card.id.startsWith('community-')) {
       // Don't allow jokers from community to be placed on the board
-      if (draggedCard.suit === 'joker') return;
+      if (card.suit === 'joker') return;
       
       // If it's a different community card than previously selected
       if (selectedCommunityCard && 
-          (selectedCommunityCard.suit !== draggedCard.suit || 
-           selectedCommunityCard.value !== draggedCard.value)) {
+          (selectedCommunityCard.suit !== card.suit || 
+           selectedCommunityCard.value !== card.value)) {
         // Remove any previously placed community card
         Object.entries(positions).forEach(([key, posCard]) => {
           if (posCard && posCard.id.startsWith('community-')) {
@@ -805,7 +820,7 @@ function GameBoard({ cards }: { cards: Card[] }) {
       
       // Create positioned version of community card
       const positionedCard: PositionedCard = {
-        ...draggedCard,
+        ...card,
         isPlaced: true,
         position: { row, slot }
       };
@@ -818,15 +833,17 @@ function GameBoard({ cards }: { cards: Card[] }) {
       
       // Set as selected community card
       setSelectedCommunityCard({
-        suit: draggedCard.suit,
-        value: draggedCard.value
+        suit: card.suit,
+        value: card.value
       });
+      
+      console.log('Community card placed', card.id, 'in slot', slotKey);
     } 
     // For player's hand cards
     else {
       // Update the card's position
       const updatedCards = boardCards.map(c => 
-        c.id === draggedCard.id 
+        c.id === card.id 
           ? { ...c, isPlaced: true, position: { row, slot } } 
           : c
       );
@@ -836,9 +853,14 @@ function GameBoard({ cards }: { cards: Card[] }) {
       // Update the positions map
       setPositions(prev => ({
         ...prev,
-        [slotKey]: updatedCards.find(c => c.id === draggedCard.id) || null
+        [slotKey]: updatedCards.find(c => c.id === card.id) || null
       }));
+      
+      console.log('Player card placed', card.id, 'in slot', slotKey);
     }
+    
+    // Clear dragged card after successful placement
+    setDraggedCard(null);
   };
   
   // Handle drag over slot
@@ -850,8 +872,9 @@ function GameBoard({ cards }: { cards: Card[] }) {
   // Handle drop on slot
   const handleDrop = (e: React.DragEvent<HTMLDivElement>, row: number, slot: number) => {
     e.preventDefault();
+    console.log('Mouse drop event on slot:', row, slot);
     handleDropCard(row, slot);
-    setDraggedCard(null);
+    // No need to setDraggedCard(null) here as handleDropCard now handles this
   };
 
   // Handle drag end (cleanup)
@@ -976,6 +999,11 @@ function GameBoard({ cards }: { cards: Card[] }) {
             // Add a clear visual indication that jokers are not selectable
             const isJoker = card.suit === 'joker';
             const cardId = `community-${card.suit}-${card.value}-${index}`;
+            const cardObj = {
+              ...card,
+              id: cardId,
+              isPlaced: false
+            };
             
             return (
               <div 
@@ -983,32 +1011,21 @@ function GameBoard({ cards }: { cards: Card[] }) {
                 id={cardId}
                 onClick={() => isJoker ? null : handleCommunityCardClick(card)}
                 draggable={!isJoker && !confirmed}
-                onDragStart={(e) => !isJoker && !confirmed ? handleDragStart({
-                  ...card,
-                  id: cardId,
-                  isPlaced: false
-                }, e) : undefined}
+                onDragStart={(e) => !isJoker && !confirmed ? handleDragStart(cardObj, e) : undefined}
                 onTouchStart={(e) => {
                   if (isJoker || confirmed) return;
-                  handleTouchStart({
-                    ...card,
-                    id: cardId,
-                    isPlaced: false
-                  }, e);
+                  handleTouchStart(cardObj, e);
                 }}
                 onDragEnd={handleDragEnd}
-                className={`w-[45px] h-[63px] rounded-lg shadow-md transform transition-all duration-200 
+                className={`w-[50px] h-[70px] rounded-lg shadow-md transform transition-all duration-200 touch-manipulation
                   ${isJoker ? 'opacity-30 cursor-not-allowed relative' : confirmed ? 'cursor-default' : 'cursor-pointer'}
                   ${selectedCommunityCard && selectedCommunityCard.suit === card.suit && selectedCommunityCard.value === card.value 
                     ? 'border-2 border-blue-500 scale-110' 
-                    : !isJoker ? 'hover:scale-105' : ''}`}
+                    : !isJoker ? 'hover:scale-105 active:scale-95' : ''}`}
+                style={{ touchAction: 'manipulation' }}
               >
                 <CardComponent
-                  card={{
-                    ...card,
-                    id: cardId,
-                    isPlaced: false
-                  }}
+                  card={cardObj}
                 />
                 {/* Add a visual indicator over joker cards */}
                 {isJoker && (
@@ -1051,7 +1068,7 @@ function GameBoard({ cards }: { cards: Card[] }) {
 
       {/* Player's cards at the bottom */}
       <div className="fixed bottom-0 left-0 right-0 bg-green-700 p-2">
-        <div className="flex flex-wrap justify-center gap-1 max-w-full mx-auto overflow-x-auto">
+        <div className="flex flex-wrap justify-center gap-1 max-w-full mx-auto overflow-x-auto pb-2">
           {sortedCards.map((card) => (
             <div 
               key={card.id}
@@ -1060,7 +1077,9 @@ function GameBoard({ cards }: { cards: Card[] }) {
               onDragStart={(e) => !card.isPlaced && !confirmed ? handleDragStart(card, e) : undefined}
               onTouchStart={(e) => !card.isPlaced && !confirmed ? handleTouchStart(card, e) : undefined}
               onDragEnd={handleDragEnd}
-              className={`${card.isPlaced ? 'opacity-50' : ''} touch-manipulation`}
+              className={`touch-manipulation transform transition-all duration-150
+                ${card.isPlaced ? 'opacity-50' : 'hover:scale-105 active:scale-95'}
+              `}
               style={{ touchAction: 'manipulation' }}
             >
               <CardComponent 
