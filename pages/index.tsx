@@ -722,14 +722,14 @@ function GameBoard({ cards }: { cards: Card[] }) {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto relative">
+    <div className="w-full max-w-5xl mx-auto relative pt-8">
       {/* Display card summary when available */}
       {cardsSummary && cardsSummary.length > 0 && (
         <CardSummary summary={cardsSummary} onReady={handleReadyForNextGame} />
       )}
 
       {/* Ready and Reset buttons */}
-      <div className="absolute top-1 right-1 flex space-x-1 items-center">
+      <div className="absolute top-0 right-0 left-0 flex space-x-1 items-center justify-end p-1 bg-green-200 rounded-t-lg z-10">
         {/* Points counter */}
         <div className={`px-2 py-0.5 text-xs ${(points[currentRoom || ''] || 0) < 0 ? 'bg-red-500' : 'bg-yellow-500'} text-white rounded-md font-medium`}>
           {points[currentRoom || ''] || 0} Pts
