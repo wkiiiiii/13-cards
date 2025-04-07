@@ -710,12 +710,15 @@ function GameBoard({ cards }: { cards: Card[] }) {
       
       // Find which slot we're over
       const slots = document.querySelectorAll('.slot-target');
-      let closestSlot: Element | null = null;
       let closestDistance = Infinity;
+      let closestRow = -1;
+      let closestSlot = -1;
       
       // Find the closest slot to the touch point
-      slots.forEach((slot) => {
+      slots.forEach((slotElement) => {
+        const slot = slotElement as HTMLElement;
         const rect = slot.getBoundingClientRect();
+        
         // Calculate center of the slot
         const slotCenterX = rect.left + rect.width / 2;
         const slotCenterY = rect.top + rect.height / 2;
@@ -731,25 +734,25 @@ function GameBoard({ cards }: { cards: Card[] }) {
         // If this is the closest slot so far
         if (distance < closestDistance) {
           closestDistance = distance;
-          closestSlot = slot;
+          
+          // Get row and slot directly from data attributes
+          const row = slot.dataset.row;
+          const slotIndex = slot.dataset.slot;
+          
+          if (row !== undefined && slotIndex !== undefined) {
+            closestRow = parseInt(row, 10);
+            closestSlot = parseInt(slotIndex, 10);
+          }
         }
       });
       
-      // Only consider slots within a reasonable distance (80px)
-      if (closestSlot && closestDistance < 80) {
-        const rowAttr = closestSlot.getAttribute('data-row');
-        const slotAttr = closestSlot.getAttribute('data-slot');
-        
-        if (rowAttr !== null && slotAttr !== null) {
-          const row = parseInt(rowAttr, 10);
-          const slot = parseInt(slotAttr, 10);
-          
-          // Check if this slot is empty
-          const slotKey = `${row}-${slot}`;
-          if (!positions[slotKey]) {
-            // Handle dropping a card (reuse existing logic)
-            handleDropCard(row, slot);
-          }
+      // Only consider slots within a reasonable distance (80px) and valid positions
+      if (closestDistance < 80 && closestRow >= 0 && closestSlot >= 0) {
+        // Check if this slot is empty
+        const slotKey = `${closestRow}-${closestSlot}`;
+        if (!positions[slotKey]) {
+          // Handle dropping a card (reuse existing logic)
+          handleDropCard(closestRow, closestSlot);
         }
       }
       
