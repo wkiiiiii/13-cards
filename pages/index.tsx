@@ -608,28 +608,115 @@ function GameBoard({ cards }: { cards: Card[] }) {
   }, [cardsSummary]);
 
   // Handle card drag start
-  const handleDragStart = (card: PositionedCard, e: React.DragEvent) => {
+  const handleDragStart = (card: PositionedCard, e: React.DragEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     if (confirmed) return;
     setDraggedCard(card);
     
-    // Set drag image (optional)
-    if (e.dataTransfer.setDragImage) {
-      const el = document.getElementById(card.id);
-      if (el) {
-        e.dataTransfer.setDragImage(el, 30, 40);
+    // Handle mouse drag events
+    if ('dataTransfer' in e) {
+      // Set drag image (optional)
+      if (e.dataTransfer.setDragImage) {
+        const el = document.getElementById(card.id);
+        if (el) {
+          e.dataTransfer.setDragImage(el, 30, 40);
+        }
       }
+      e.dataTransfer.effectAllowed = 'move';
     }
   };
   
-  // Handle drag over slot
-  const handleDragOver = (e: React.DragEvent, row: number, slot: number) => {
-    e.preventDefault(); // Necessary to allow drop
-    e.dataTransfer.dropEffect = 'move';
+  // Handle touch start for mobile devices
+  const handleTouchStart = (card: PositionedCard, e: React.TouchEvent<HTMLDivElement>) => {
+    if (confirmed) return;
+    setDraggedCard(card);
+    
+    // Prevent scrolling while dragging
+    e.preventDefault();
+    
+    // Get the touch position
+    const touch = e.touches[0];
+    const cardElement = e.currentTarget;
+    
+    // Store the initial position
+    const initialX = touch.clientX;
+    const initialY = touch.clientY;
+    
+    // Create a function to handle touch move
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      const currentTouch = moveEvent.touches[0];
+      
+      // Calculate the new position
+      const deltaX = currentTouch.clientX - initialX;
+      const deltaY = currentTouch.clientY - initialY;
+      
+      // Apply the transform
+      cardElement.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+      cardElement.style.zIndex = '1000';
+      cardElement.style.position = 'relative';
+      
+      // Prevent default to stop scrolling
+      moveEvent.preventDefault();
+    };
+    
+    // Create a function to handle touch end
+    const handleTouchEnd = (endEvent: TouchEvent) => {
+      // Reset the transform
+      cardElement.style.transform = '';
+      cardElement.style.zIndex = '';
+      cardElement.style.position = '';
+      
+      // Get touch end position
+      const endTouch = endEvent.changedTouches[0];
+      
+      // Find which slot we're over
+      const slots = document.querySelectorAll('.slot-target');
+      let dropTarget: HTMLElement | null = null;
+      
+      slots.forEach((slot: Element) => {
+        const rect = slot.getBoundingClientRect();
+        if (
+          endTouch.clientX >= rect.left &&
+          endTouch.clientX <= rect.right &&
+          endTouch.clientY >= rect.top &&
+          endTouch.clientY <= rect.bottom
+        ) {
+          dropTarget = slot as HTMLElement;
+        }
+      });
+      
+      // If we found a valid drop target
+      if (dropTarget) {
+        const rowAttr = dropTarget.getAttribute('data-row');
+        const slotAttr = dropTarget.getAttribute('data-slot');
+        
+        if (rowAttr !== null && slotAttr !== null) {
+          const row = parseInt(rowAttr, 10);
+          const slot = parseInt(slotAttr, 10);
+          
+          // Check if this slot is empty
+          const slotKey = `${row}-${slot}`;
+          if (!positions[slotKey]) {
+            // Handle dropping a card (reuse existing logic)
+            handleDropCard(row, slot);
+          }
+        }
+      }
+      
+      // Remove event listeners
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+      
+      // Clear the dragged card
+      setDraggedCard(null);
+    };
+    
+    // Add event listeners
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
   };
   
-  // Handle drop on slot
-  const handleDrop = (e: React.DragEvent, row: number, slot: number) => {
-    e.preventDefault();
+  // Extracted the drop logic to reuse between mouse and touch
+  const handleDropCard = (row: number, slot: number) => {
     if (!draggedCard || confirmed) return;
     
     const slotKey = `${row}-${slot}`;
@@ -693,7 +780,18 @@ function GameBoard({ cards }: { cards: Card[] }) {
         [slotKey]: updatedCards.find(c => c.id === draggedCard.id) || null
       }));
     }
-    
+  };
+  
+  // Handle drag over slot
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault(); // Necessary to allow drop
+    e.dataTransfer.dropEffect = 'move';
+  };
+  
+  // Handle drop on slot
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, row: number, slot: number) => {
+    e.preventDefault();
+    handleDropCard(row, slot);
     setDraggedCard(null);
   };
 
@@ -745,16 +843,18 @@ function GameBoard({ cards }: { cards: Card[] }) {
             {[...Array(3)].map((_, i) => (
               <div
                 key={`row1-${i}`}
-                onDragOver={(e) => handleDragOver(e, 0, i)}
+                data-row="0"
+                data-slot={`${i}`}
+                className="slot-target w-[45px] h-[63px] rounded-lg shadow-md flex justify-center items-center"
+                onDragOver={(e) => handleDragOver(e)}
                 onDrop={(e) => handleDrop(e, 0, i)}
-                className={`w-[45px] h-[63px] rounded-lg shadow-md ${!positions[`0-${i}`] ? 'bg-white opacity-70 border-2 border-dashed border-gray-400' : ''}`}
               >
                 {positions[`0-${i}`] ? (
                   <div onClick={() => handleSlotClick(0, i)}>
                     <CardComponent card={positions[`0-${i}`]!} isSmall={false} />
                   </div>
                 ) : (
-                  <div className="w-full h-full"></div>
+                  <div className={`w-full h-full border-2 border-dashed border-gray-400 opacity-70 bg-white`}></div>
                 )}
               </div>
             ))}
@@ -765,16 +865,18 @@ function GameBoard({ cards }: { cards: Card[] }) {
             {[...Array(5)].map((_, i) => (
               <div
                 key={`row2-${i}`}
-                onDragOver={(e) => handleDragOver(e, 1, i)}
+                data-row="1"
+                data-slot={`${i}`}
+                className="slot-target w-[45px] h-[63px] rounded-lg shadow-md flex justify-center items-center"
+                onDragOver={(e) => handleDragOver(e)}
                 onDrop={(e) => handleDrop(e, 1, i)}
-                className={`w-[45px] h-[63px] rounded-lg shadow-md ${!positions[`1-${i}`] ? 'bg-white opacity-70 border-2 border-dashed border-gray-400' : ''}`}
               >
                 {positions[`1-${i}`] ? (
                   <div onClick={() => handleSlotClick(1, i)}>
                     <CardComponent card={positions[`1-${i}`]!} isSmall={false} />
                   </div>
                 ) : (
-                  <div className="w-full h-full"></div>
+                  <div className={`w-full h-full border-2 border-dashed border-gray-400 opacity-70 bg-white`}></div>
                 )}
               </div>
             ))}
@@ -785,16 +887,18 @@ function GameBoard({ cards }: { cards: Card[] }) {
             {[...Array(5)].map((_, i) => (
               <div
                 key={`row3-${i}`}
-                onDragOver={(e) => handleDragOver(e, 2, i)}
+                data-row="2"
+                data-slot={`${i}`}
+                className="slot-target w-[45px] h-[63px] rounded-lg shadow-md flex justify-center items-center"
+                onDragOver={(e) => handleDragOver(e)}
                 onDrop={(e) => handleDrop(e, 2, i)}
-                className={`w-[45px] h-[63px] rounded-lg shadow-md ${!positions[`2-${i}`] ? 'bg-white opacity-70 border-2 border-dashed border-gray-400' : ''}`}
               >
                 {positions[`2-${i}`] ? (
                   <div onClick={() => handleSlotClick(2, i)}>
                     <CardComponent card={positions[`2-${i}`]!} isSmall={false} />
                   </div>
                 ) : (
-                  <div className="w-full h-full"></div>
+                  <div className={`w-full h-full border-2 border-dashed border-gray-400 opacity-70 bg-white`}></div>
                 )}
               </div>
             ))}
@@ -816,6 +920,11 @@ function GameBoard({ cards }: { cards: Card[] }) {
                 onClick={() => isJoker ? null : handleCommunityCardClick(card)}
                 draggable={!isJoker}
                 onDragStart={(e) => !isJoker ? handleDragStart({
+                  ...card,
+                  id: `community-${card.suit}-${card.value}-${index}`,
+                  isPlaced: false
+                }, e) : undefined}
+                onTouchStart={(e) => !isJoker ? handleTouchStart({
                   ...card,
                   id: `community-${card.suit}-${card.value}-${index}`,
                   isPlaced: false
@@ -882,6 +991,7 @@ function GameBoard({ cards }: { cards: Card[] }) {
               id={card.id}
               draggable={!card.isPlaced && !confirmed}
               onDragStart={(e) => handleDragStart(card, e)}
+              onTouchStart={(e) => !card.isPlaced && !confirmed ? handleTouchStart(card, e) : undefined}
               onDragEnd={handleDragEnd}
               className={card.isPlaced ? 'opacity-50' : ''}
             >
