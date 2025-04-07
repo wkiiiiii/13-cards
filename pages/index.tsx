@@ -670,22 +670,21 @@ function GameBoard({ cards }: { cards: Card[] }) {
       
       // Find which slot we're over
       const slots = document.querySelectorAll('.slot-target');
-      let dropTarget: HTMLElement | null = null;
       
-      slots.forEach((slot: Element) => {
+      // Convert NodeList to Array and find the matching element
+      const dropTarget = Array.from(slots).find(slot => {
         const rect = slot.getBoundingClientRect();
-        if (
+        return (
           endTouch.clientX >= rect.left &&
           endTouch.clientX <= rect.right &&
           endTouch.clientY >= rect.top &&
           endTouch.clientY <= rect.bottom
-        ) {
-          dropTarget = slot as HTMLElement;
-        }
+        );
       });
       
       // If we found a valid drop target
       if (dropTarget) {
+        // Safely get attributes with type assertion
         const rowAttr = dropTarget.getAttribute('data-row');
         const slotAttr = dropTarget.getAttribute('data-slot');
         
