@@ -649,10 +649,48 @@ function GameBoard({ cards }: { cards: Card[] }) {
       const deltaX = currentTouch.clientX - initialX;
       const deltaY = currentTouch.clientY - initialY;
       
-      // Apply the transform
-      cardElement.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+      // Apply the transform with a slight scale increase to make it more visible
+      cardElement.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.1)`;
       cardElement.style.zIndex = '1000';
       cardElement.style.position = 'relative';
+      cardElement.style.opacity = '0.8'; // Add slight transparency
+      cardElement.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)'; // Add shadow for depth
+      
+      // Highlight potential drop targets by finding the closest slot
+      const slots = document.querySelectorAll('.slot-target');
+      let closestSlot: Element | null = null;
+      let closestDistance = Infinity;
+      
+      slots.forEach((slot) => {
+        const rect = slot.getBoundingClientRect();
+        // Calculate center of the slot
+        const slotCenterX = rect.left + rect.width / 2;
+        const slotCenterY = rect.top + rect.height / 2;
+        
+        // Calculate distance from touch to slot center
+        const touchX = currentTouch.clientX;
+        const touchY = currentTouch.clientY;
+        const distance = Math.sqrt(
+          Math.pow(touchX - slotCenterX, 2) + 
+          Math.pow(touchY - slotCenterY, 2)
+        );
+        
+        // If this is the closest slot so far
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestSlot = slot;
+        }
+        
+        // Reset any previously highlighted slots
+        (slot as HTMLElement).style.background = '';
+        (slot as HTMLElement).style.borderColor = '';
+      });
+      
+      // Highlight the closest slot if it's within a reasonable distance
+      if (closestSlot && closestDistance < 80) {
+        (closestSlot as HTMLElement).style.background = 'rgba(59, 130, 246, 0.2)';
+        (closestSlot as HTMLElement).style.borderColor = '#3b82f6';
+      }
       
       // Prevent default to stop scrolling
       moveEvent.preventDefault();
@@ -664,29 +702,43 @@ function GameBoard({ cards }: { cards: Card[] }) {
       cardElement.style.transform = '';
       cardElement.style.zIndex = '';
       cardElement.style.position = '';
+      cardElement.style.opacity = '';
+      cardElement.style.boxShadow = '';
       
       // Get touch end position
       const endTouch = endEvent.changedTouches[0];
       
       // Find which slot we're over
       const slots = document.querySelectorAll('.slot-target');
+      let closestSlot: Element | null = null;
+      let closestDistance = Infinity;
       
-      // Convert NodeList to Array and find the matching element
-      const dropTarget = Array.from(slots).find(slot => {
+      // Find the closest slot to the touch point
+      slots.forEach((slot) => {
         const rect = slot.getBoundingClientRect();
-        return (
-          endTouch.clientX >= rect.left &&
-          endTouch.clientX <= rect.right &&
-          endTouch.clientY >= rect.top &&
-          endTouch.clientY <= rect.bottom
+        // Calculate center of the slot
+        const slotCenterX = rect.left + rect.width / 2;
+        const slotCenterY = rect.top + rect.height / 2;
+        
+        // Calculate distance from touch to slot center
+        const touchX = endTouch.clientX;
+        const touchY = endTouch.clientY;
+        const distance = Math.sqrt(
+          Math.pow(touchX - slotCenterX, 2) + 
+          Math.pow(touchY - slotCenterY, 2)
         );
+        
+        // If this is the closest slot so far
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestSlot = slot;
+        }
       });
       
-      // If we found a valid drop target
-      if (dropTarget) {
-        // Safely get attributes with type assertion
-        const rowAttr = dropTarget.getAttribute('data-row');
-        const slotAttr = dropTarget.getAttribute('data-slot');
+      // Only consider slots within a reasonable distance (80px)
+      if (closestSlot && closestDistance < 80) {
+        const rowAttr = closestSlot.getAttribute('data-row');
+        const slotAttr = closestSlot.getAttribute('data-slot');
         
         if (rowAttr !== null && slotAttr !== null) {
           const row = parseInt(rowAttr, 10);
