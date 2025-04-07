@@ -43,9 +43,11 @@ function CardComponent({
   }
 
   const baseClasses = "bg-white rounded-lg shadow-md flex flex-col items-center justify-between cursor-pointer hover:shadow-xl transition-shadow";
+  
+  // Reduced sizes for both regular and small cards for better mobile compatibility
   const sizeClasses = isSmall 
-    ? "w-12 h-16 p-1" 
-    : "w-[60px] h-[84px] p-2";
+    ? "w-8 h-12 p-1" // Smaller size for already small cards
+    : "w-[45px] h-[63px] p-1"; // Reduced size for regular cards (was 60x84)
 
   return (
     <div 
@@ -53,8 +55,8 @@ function CardComponent({
       onClick={onClick}
     >
       <div className={`${color} flex flex-col items-center`}>
-        <div className={`font-bold ${isSmall ? 'text-sm' : 'text-lg'}`}>{card.value}</div>
-        <div className={isSmall ? 'text-lg' : 'text-2xl'}>{suitSymbols[card.suit]}</div>
+        <div className={`font-bold ${isSmall ? 'text-xs' : 'text-sm'}`}>{card.value}</div>
+        <div className={isSmall ? 'text-base' : 'text-lg'}>{suitSymbols[card.suit]}</div>
       </div>
     </div>
   );
@@ -71,7 +73,7 @@ function EmptySlot({
 }) {
   return (
     <div 
-      className={`w-[60px] h-[84px] rounded-lg shadow-md ${isOccupied ? 'p-0' : 'bg-white opacity-80'}`}
+      className={`w-[45px] h-[63px] rounded-lg shadow-md ${isOccupied ? 'p-0' : 'bg-white opacity-80'}`}
       onClick={onClick}
     >
       {isOccupied && card && <CardComponent card={card} isSmall={false} />}
@@ -124,7 +126,7 @@ function CardSummary({ summary, onReady }: {
     }
     
     return (
-      <span className={`${color} font-bold`}>
+      <span className={`${color} font-bold text-sm`}>
         {card.value}{suitSymbols[card.suit]}
       </span>
     );
@@ -135,13 +137,6 @@ function CardSummary({ summary, onReady }: {
     
     const amount = transfers[toRoomId] || 0;
     if (amount <= 0) return;
-    
-    console.log('Transferring points:', {
-      from: currentRoom,
-      to: toRoomId,
-      amount: amount,
-      currentPoints: points[currentRoom] || 0
-    });
     
     transferPoints(currentRoom, toRoomId, amount);
     
@@ -165,17 +160,17 @@ function CardSummary({ summary, onReady }: {
     const roomTransactions = getRoomTransactions(roomId);
     
     if (roomTransactions.length === 0) {
-      return <p className="text-gray-500 italic text-sm">No transactions yet</p>;
+      return <p className="text-gray-500 italic text-xs">No transactions yet</p>;
     }
     
     return (
-      <div className="max-h-32 overflow-y-auto">
-        <table className="w-full text-sm">
+      <div className="max-h-24 overflow-y-auto">
+        <table className="w-full text-xs">
           <thead className="bg-gray-100">
             <tr>
-              <th className="text-left p-1">Time</th>
-              <th className="text-left p-1">Details</th>
-              <th className="text-right p-1">Amount</th>
+              <th className="text-left p-0.5">Time</th>
+              <th className="text-left p-0.5">Details</th>
+              <th className="text-right p-0.5">Amt</th>
             </tr>
           </thead>
           <tbody>
@@ -185,14 +180,14 @@ function CardSummary({ summary, onReady }: {
               
               return (
                 <tr key={`${tx.timestamp}-${i}`} className="border-b border-gray-100">
-                  <td className="p-1">{formatTime(tx.timestamp)}</td>
-                  <td className="p-1">
+                  <td className="p-0.5">{formatTime(tx.timestamp)}</td>
+                  <td className="p-0.5 truncate max-w-[120px]">
                     {isReceiving 
-                      ? `Received from ${otherRoom.replace('-', ' ').toUpperCase()}`
-                      : `Sent to ${otherRoom.replace('-', ' ').toUpperCase()}`
+                      ? `From ${otherRoom.replace('-', ' ').toUpperCase()}`
+                      : `To ${otherRoom.replace('-', ' ').toUpperCase()}`
                     }
                   </td>
-                  <td className={`p-1 text-right ${isReceiving ? 'text-green-600' : 'text-red-600'}`}>
+                  <td className={`p-0.5 text-right ${isReceiving ? 'text-green-600' : 'text-red-600'}`}>
                     {isReceiving ? '+' : '-'}{tx.amount}
                   </td>
                 </tr>
@@ -205,40 +200,40 @@ function CardSummary({ summary, onReady }: {
   };
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 shadow-2xl w-[75vw] max-h-[90vh] overflow-auto">
-        <h2 className="text-2xl font-bold mb-6 text-center">Card Summary</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2">
+      <div className="bg-white rounded-xl p-3 shadow-2xl w-full max-h-[90vh] overflow-auto">
+        <h2 className="text-xl font-bold mb-3 text-center">Card Summary</h2>
         
         {/* Card Summary Section with integrated transfer controls */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {summary.map((playerSummary, index) => (
-            <div key={playerSummary.roomId} className="border rounded-lg p-4 bg-gray-50">
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+            <div key={playerSummary.roomId} className="border rounded-lg p-2 bg-gray-50">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-2 mb-2">
                 <div>
-                  <h3 className="text-xl font-semibold">
+                  <h3 className="text-base font-semibold">
                     Player {index + 1} ({playerSummary.roomId.replace('-', ' ').toUpperCase()})
                   </h3>
-                  <p className={`text-lg ${(points[playerSummary.roomId] || 0) < 0 ? 'text-red-600' : 'text-blue-600'} font-bold`}>
+                  <p className={`text-base ${(points[playerSummary.roomId] || 0) < 0 ? 'text-red-600' : 'text-blue-600'} font-bold`}>
                     {points[playerSummary.roomId] || 0} points
                   </p>
                 </div>
                 
                 {/* Transfer controls - only show for other players when in summary state */}
                 {currentRoom && currentRoom !== playerSummary.roomId && (
-                  <div className="bg-blue-50 p-3 rounded-md flex items-center space-x-2 self-start">
+                  <div className="bg-blue-50 p-2 rounded-md flex items-center space-x-1 self-start">
                     <div className="flex flex-col">
-                      <label className="text-sm text-gray-500 mb-1">Transfer points to this player:</label>
+                      <label className="text-xs text-gray-500 mb-0.5">Transfer points:</label>
                       <div className="flex items-center">
                         <input
                           type="number"
                           value={transfers[playerSummary.roomId] || 0}
                           onChange={(e) => handleAmountChange(e, playerSummary.roomId)}
-                          className="border rounded p-1 w-20 text-right mr-2"
+                          className="border rounded p-0.5 w-14 text-right mr-1 text-sm"
                         />
                         <button
                           onClick={() => handleTransfer(playerSummary.roomId)}
                           disabled={(transfers[playerSummary.roomId] || 0) <= 0}
-                          className={`px-3 py-1 rounded ${
+                          className={`px-2 py-0.5 rounded text-xs ${
                             (transfers[playerSummary.roomId] || 0) <= 0
                               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                               : 'bg-blue-500 text-white hover:bg-blue-600'
@@ -253,17 +248,17 @@ function CardSummary({ summary, onReady }: {
               </div>
               
               {/* Transaction history */}
-              <div className="mb-4">
-                <h4 className="font-medium text-sm mb-1 text-gray-700">Transaction History:</h4>
+              <div className="mb-2">
+                <h4 className="font-medium text-xs mb-0.5 text-gray-700">Transaction History:</h4>
                 {renderTransactionHistory(playerSummary.roomId)}
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-2">
                 <div>
-                  <p className="text-lg font-medium mb-1">Top Row:</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-sm font-medium mb-0.5">Top Row:</p>
+                  <div className="flex flex-wrap gap-1">
                     {playerSummary.cards.row0.map((card, i) => (
-                      <span key={`${playerSummary.playerId}-0-${i}`} className="px-2 py-1 bg-gray-100 rounded">
+                      <span key={`${playerSummary.playerId}-0-${i}`} className="px-1 py-0.5 bg-gray-100 rounded text-xs">
                         {renderCard(card)}
                       </span>
                     ))}
@@ -271,10 +266,10 @@ function CardSummary({ summary, onReady }: {
                 </div>
                 
                 <div>
-                  <p className="text-lg font-medium mb-1">Middle Row:</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-sm font-medium mb-0.5">Middle Row:</p>
+                  <div className="flex flex-wrap gap-1">
                     {playerSummary.cards.row1.map((card, i) => (
-                      <span key={`${playerSummary.playerId}-1-${i}`} className="px-2 py-1 bg-gray-100 rounded">
+                      <span key={`${playerSummary.playerId}-1-${i}`} className="px-1 py-0.5 bg-gray-100 rounded text-xs">
                         {renderCard(card)}
                       </span>
                     ))}
@@ -282,10 +277,10 @@ function CardSummary({ summary, onReady }: {
                 </div>
                 
                 <div>
-                  <p className="text-lg font-medium mb-1">Bottom Row:</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-sm font-medium mb-0.5">Bottom Row:</p>
+                  <div className="flex flex-wrap gap-1">
                     {playerSummary.cards.row2.map((card, i) => (
-                      <span key={`${playerSummary.playerId}-2-${i}`} className="px-2 py-1 bg-gray-100 rounded">
+                      <span key={`${playerSummary.playerId}-2-${i}`} className="px-1 py-0.5 bg-gray-100 rounded text-xs">
                         {renderCard(card)}
                       </span>
                     ))}
@@ -295,8 +290,8 @@ function CardSummary({ summary, onReady }: {
                 {/* Community card used */}
                 {playerSummary.communityCardUsed && (
                   <div>
-                    <p className="text-lg font-medium mb-1">Community Card Used:</p>
-                    <span className="px-3 py-2 bg-blue-100 rounded-md inline-block">
+                    <p className="text-sm font-medium mb-0.5">Community Card Used:</p>
+                    <span className="px-2 py-1 bg-blue-100 rounded-md inline-block text-xs">
                       {renderCard(playerSummary.communityCardUsed)}
                     </span>
                   </div>
@@ -306,10 +301,10 @@ function CardSummary({ summary, onReady }: {
           ))}
         </div>
         
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <button 
             onClick={onReady}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="px-4 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
           >
             Ready for Next Round
           </button>
@@ -734,15 +729,15 @@ function GameBoard({ cards }: { cards: Card[] }) {
       )}
 
       {/* Ready and Reset buttons */}
-      <div className="absolute top-2 right-2 flex space-x-2 items-center">
+      <div className="absolute top-1 right-1 flex space-x-1 items-center">
         {/* Points counter */}
-        <div className={`px-3 py-1 ${(points[currentRoom || ''] || 0) < 0 ? 'bg-red-500' : 'bg-yellow-500'} text-white rounded-md font-medium`}>
-          {points[currentRoom || ''] || 0} Points
+        <div className={`px-2 py-0.5 text-xs ${(points[currentRoom || ''] || 0) < 0 ? 'bg-red-500' : 'bg-yellow-500'} text-white rounded-md font-medium`}>
+          {points[currentRoom || ''] || 0} Pts
         </div>
         
         <button 
           onClick={handleReady}
-          className={`px-4 py-2 rounded-md transition-colors min-w-[150px] text-center ${
+          className={`px-2 py-1 rounded-md transition-colors text-xs min-w-[90px] text-center ${
             confirmed 
               ? "bg-green-600 text-white cursor-default" 
               : isGameComplete
@@ -755,23 +750,23 @@ function GameBoard({ cards }: { cards: Card[] }) {
         </button>
         <button 
           onClick={handleReset}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors min-w-[80px]"
+          className="px-2 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs min-w-[50px]"
         >
           Reset
         </button>
       </div>
 
       {/* Game board with three rows */}
-      <div className="mb-8 bg-green-200 rounded-xl p-8 shadow-lg">
-        <div className="space-y-6">
+      <div className="mb-6 bg-green-200 rounded-xl p-4 shadow-lg">
+        <div className="space-y-3">
           {/* First row - 3 slots */}
-          <div className="flex justify-start gap-4 ml-[120px]">
+          <div className="flex justify-start gap-2 ml-[50px]">
             {[...Array(3)].map((_, i) => (
               <div
                 key={`row1-${i}`}
                 onDragOver={(e) => handleDragOver(e, 0, i)}
                 onDrop={(e) => handleDrop(e, 0, i)}
-                className={`w-[60px] h-[84px] rounded-lg shadow-md ${!positions[`0-${i}`] ? 'bg-white opacity-70 border-2 border-dashed border-gray-400' : ''}`}
+                className={`w-[45px] h-[63px] rounded-lg shadow-md ${!positions[`0-${i}`] ? 'bg-white opacity-70 border-2 border-dashed border-gray-400' : ''}`}
               >
                 {positions[`0-${i}`] ? (
                   <div onClick={() => handleSlotClick(0, i)}>
@@ -785,13 +780,13 @@ function GameBoard({ cards }: { cards: Card[] }) {
           </div>
           
           {/* Second row - 5 slots */}
-          <div className="flex justify-start gap-4">
+          <div className="flex justify-start gap-2">
             {[...Array(5)].map((_, i) => (
               <div
                 key={`row2-${i}`}
                 onDragOver={(e) => handleDragOver(e, 1, i)}
                 onDrop={(e) => handleDrop(e, 1, i)}
-                className={`w-[60px] h-[84px] rounded-lg shadow-md ${!positions[`1-${i}`] ? 'bg-white opacity-70 border-2 border-dashed border-gray-400' : ''}`}
+                className={`w-[45px] h-[63px] rounded-lg shadow-md ${!positions[`1-${i}`] ? 'bg-white opacity-70 border-2 border-dashed border-gray-400' : ''}`}
               >
                 {positions[`1-${i}`] ? (
                   <div onClick={() => handleSlotClick(1, i)}>
@@ -805,13 +800,13 @@ function GameBoard({ cards }: { cards: Card[] }) {
           </div>
           
           {/* Third row - 5 slots */}
-          <div className="flex justify-start gap-4">
+          <div className="flex justify-start gap-2">
             {[...Array(5)].map((_, i) => (
               <div
                 key={`row3-${i}`}
                 onDragOver={(e) => handleDragOver(e, 2, i)}
                 onDrop={(e) => handleDrop(e, 2, i)}
-                className={`w-[60px] h-[84px] rounded-lg shadow-md ${!positions[`2-${i}`] ? 'bg-white opacity-70 border-2 border-dashed border-gray-400' : ''}`}
+                className={`w-[45px] h-[63px] rounded-lg shadow-md ${!positions[`2-${i}`] ? 'bg-white opacity-70 border-2 border-dashed border-gray-400' : ''}`}
               >
                 {positions[`2-${i}`] ? (
                   <div onClick={() => handleSlotClick(2, i)}>
@@ -827,9 +822,9 @@ function GameBoard({ cards }: { cards: Card[] }) {
       </div>
 
       {/* Community cards section */}
-      <div className="mb-8 bg-blue-100 rounded-xl p-4 shadow-lg">
-        <h3 className="text-lg font-medium mb-2 text-gray-700">Community Cards (Select at most one):</h3>
-        <div className="flex justify-center gap-4">
+      <div className="mb-4 bg-blue-100 rounded-xl p-3 shadow-lg">
+        <h3 className="text-sm font-medium mb-2 text-gray-700">Community Cards (Select at most one):</h3>
+        <div className="flex justify-center gap-2">
           {communityCards.map((card, index) => (
             <div 
               key={`community-${index}`}
@@ -842,7 +837,7 @@ function GameBoard({ cards }: { cards: Card[] }) {
                 isPlaced: false
               }, e)}
               onDragEnd={handleDragEnd}
-              className={`w-[60px] h-[84px] rounded-lg shadow-md cursor-pointer transform transition-all duration-200 
+              className={`w-[45px] h-[63px] rounded-lg shadow-md cursor-pointer transform transition-all duration-200 
                 ${selectedCommunityCard && selectedCommunityCard.suit === card.suit && selectedCommunityCard.value === card.value 
                   ? 'border-2 border-blue-500 scale-110' 
                   : 'hover:scale-105'}`}
@@ -858,7 +853,7 @@ function GameBoard({ cards }: { cards: Card[] }) {
           ))}
         </div>
         {selectedCommunityCard && (
-          <p className="text-center mt-2 text-gray-600">
+          <p className="text-center mt-1 text-xs text-gray-600">
             Selected: <span className={selectedCommunityCard.suit === 'hearts' || selectedCommunityCard.suit === 'diamonds' ? 'text-red-500' : selectedCommunityCard.suit === 'joker' ? 'text-purple-600' : 'text-gray-900'}>
               {selectedCommunityCard.value} of {selectedCommunityCard.suit === 'joker' ? 'Jokers' : selectedCommunityCard.suit}
             </span>
@@ -867,18 +862,18 @@ function GameBoard({ cards }: { cards: Card[] }) {
       </div>
 
       {/* Sorting controls */}
-      <div className="fixed bottom-24 right-4 bg-green-700 p-2 rounded-lg shadow-lg z-10">
-        <div className="flex space-x-2 items-center">
-          <span className="text-white">Sort by:</span>
+      <div className="fixed bottom-20 right-2 bg-green-700 p-1.5 rounded-lg shadow-lg z-10">
+        <div className="flex space-x-1 items-center">
+          <span className="text-white text-xs">Sort:</span>
           <button 
             onClick={() => setSortMethod('suit')} 
-            className={`px-3 py-1 rounded-md ${sortMethod === 'suit' ? 'bg-blue-500 text-white' : 'bg-green-600 text-white'}`}
+            className={`px-2 py-0.5 rounded-md text-xs ${sortMethod === 'suit' ? 'bg-blue-500 text-white' : 'bg-green-600 text-white'}`}
           >
             Suit
           </button>
           <button 
             onClick={() => setSortMethod('value')} 
-            className={`px-3 py-1 rounded-md ${sortMethod === 'value' ? 'bg-blue-500 text-white' : 'bg-green-600 text-white'}`}
+            className={`px-2 py-0.5 rounded-md text-xs ${sortMethod === 'value' ? 'bg-blue-500 text-white' : 'bg-green-600 text-white'}`}
           >
             Value
           </button>
@@ -886,8 +881,8 @@ function GameBoard({ cards }: { cards: Card[] }) {
       </div>
 
       {/* Player's cards at the bottom */}
-      <div className="fixed bottom-0 left-0 right-0 bg-green-700 p-4">
-        <div className="flex justify-center gap-2 max-w-5xl mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 bg-green-700 p-2">
+        <div className="flex flex-wrap justify-center gap-1 max-w-full mx-auto overflow-x-auto">
           {sortedCards.map((card) => (
             <div 
               key={card.id}
